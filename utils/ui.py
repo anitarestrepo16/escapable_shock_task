@@ -1,20 +1,232 @@
 from psychopy import visual, core, event
-from psychopy.tools.filetools import fromFile, toFile
+
+# from psychopy.tools.filetools import fromFile, toFile
 import numpy as np
 from time import time
+import random
 import re
-from memory_profiler import profile
+
+BORDER_WIDTH = 0.2
 
 
-def translate_condition_codes(marine_animal):
-    if marine_animal.lower() == "shark":
-        return "inequality"
-    elif marine_animal.lower() == "whale":
-        return "equality"
-    elif marine_animal.lower() == "seal":
-        return "meritocracy"
+def present_text(win, text_block, text_col="white", display_time=1):
+    """
+    Displays a block of text on the screen.
+    """
+    msg = visual.TextStim(win, text=text_block, color=text_col, pos=(0, 0))
+    msg.draw()
+    win.flip()
+    core.wait(display_time)
+
+
+def wait_for_keypress(win, message=""):
+    """
+    Wait until subject presses spacebar.
+    """
+    if message:
+        present_text(win, message)
+    event.waitKeys(keyList=["space"])  # wait until subject responds
+
+
+def fixation_cross(win):
+    """
+    Displays a fixation cross for a random amount of time between
+    6 and 8 seconds.
+    """
+    fixation = visual.TextStim(win, text="+", color="white", pos=(0, 0))
+    fixation.draw()
+    win.flip()
+    core.wait(np.random.uniform(6, 8))
+
+
+def anticipation(win, display_time, screen_size=(1, 1)):
+    """
+    Present a blank screen with a yellow border for display_time (seconds).
+    """
+    box_size = tuple(s - BORDER_WIDTH for s in screen_size)
+    border = visual.Rect(win, size=screen_size, fillColor=(255, 233, 0), units="height")
+    box = visual.Rect(win, size=box_size, units="height", fillColor="white")
+
+    border.draw()
+    box.draw()
+    win.flip()
+    core.wait(display_time)
+
+
+def _get_square_locs(i, j, screen_size=(1, 1), dimensions=(5, 5)):
+    grid_width = screen_size[0] - BORDER_WIDTH
+    square_width = grid_width / dimensions[0]
+    start = -grid_width / 2  # from center
+    x = start + i * square_width + square_width / 2
+    y = start + j * square_width + square_width / 2
+    return x, y
+
+
+def _grid_coordinates(screen_size=(1, 1), dimensions=(5, 5)):
+    grid = np.empty(dimensions, dtype=object)
+    for i in range(dimensions[0]):
+        for j in range(dimensions[1]):
+            grid[i, j] = _get_square_locs(i, j)
+    return grid
+
+
+def _get_start_position(coordinate_grid, dimensions=(5, 5)):
+    """
+    Randomly choose one of 12 possible ball start positions.
+    """
+    possible_starts = {}
+    cell_coords = {}
+    n = 0
+    for row in [0, 4]:
+        for col in [1, 2, 3]:
+            possible_starts[str(n)] = coordinate_grid[row, col]
+            cell_coords[str(n)] = (row, col)
+            n += 1
+    for row in [1, 2, 3]:
+        for col in [0, 4]:
+            possible_starts[str(n)] = coordinate_grid[row, col]
+            cell_coords[str(n)] = (row, col)
+            n += 1
+    start_n = random.sample(range(11), 1)[0]
+    print(start_n)
+    print(possible_starts[str(start_n)])
+    print(cell_coords[str(start_n)])
+    return {"pos": possible_starts[str(start_n)], "coords": cell_coords[str(start_n)]}
+
+
+def _determine_shuttle_position(start_position):
+    start_row, start_col = start_position["coords"]
+
+    # if starting row is 0
+    print(start_row)
+    print(start_col)
+    if start_row == 0:
+        end_row = 4
+        return (4, 99)
+    elif start_row == 4:
+        end_row = 0
+        return (0, 99)
     else:
-        print("ERROR: NO VALID CONDITION CODE - START AGAIN")
+        if start_col == 0:
+            end_col = 4
+            return (99, 4)
+        elif start_col == 4:
+            end_col = 0
+            return (99, 0)
+        else:
+            print("ERROR: Impossible starting position.")
+
+
+def _draw_grid(win, screen_size=(1, 1), dimensions=(5, 5)):
+    """
+    Create 5-5 grid drawing.
+    """
+    grid_width = screen_size[0] - BORDER_WIDTH
+    grid = np.empty(dimensions, dtype=object)
+    for i in range(dimensions[0]):
+        for j in range(dimensions[1]):
+            grid[i, j] = visual.Rect(
+                win,
+                size=grid_width / dimensions[0],
+                pos=_get_square_locs(i, j),
+                fillColor="white",
+                lineColor="black",
+                units="height",  # sizes/locations in fractions of window height
+            )
+            grid[i, j].draw()
+
+
+# def move_ball(ball, keyboard)
+
+
+def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
+    """
+    Show 5-5 grid and allow for ball motion by participant.
+    """
+    grid_width = screen_size[0] - BORDER_WIDTH
+    border = visual.Rect(win, size=screen_size, fillColor=(128, 0, 128), units="height")
+    ball = visual.Circle(
+        win, fillColor="red", units="height", radius=(grid_width / dimensions[0]) / 2
+    )
+    coordinate_grid = _grid_coordinates()
+    starting_position = _get_start_position(coordinate_grid)
+    shuttle_position = _determine_shuttle_position(starting_position)
+    print("shuttle position:")
+    print(shuttle_position)
+    border.draw()
+    # draw starting grid
+    _draw_grid(win, screen_size, dimensions)
+    ball.pos = starting_position["pos"]
+    ball.draw()
+    t0 = time()
+    print(t0)
+    win.flip()
+
+    # move ball
+    t = time()
+    shuttle_resp = False
+    print(t)
+
+
+'''
+    while not shuttle_resp:
+        # move ball
+        keys = event.getKeys()
+    t < display_time:
+        grid.draw()
+        win.flip()
+        t = t - t1
+        print(t)
+    #core.wait(display_time)
+    t0 = time()
+    win.flip()
+    t = time()
+    end_txt = False
+    while not end_txt:
+        keys = event.getKeys()
+        # if done responding
+        if "return" in keys:
+            resp = box.getText()
+            box.clear()
+            box.setAutoDraw(False)
+            t = time()
+            # if time hasn't run out, show wait message
+            while t < t0 + wait_time:
+                time_left = countdown.get_time_left(time())
+                t = time()
+                if t < t + 1:
+                    wait_message.draw()
+                    round_counter.draw()
+                    countdown.draw_time_left(time_left, win)
+                    win.flip()
+                    t = time()
+                else:
+                    continue
+            win.flip()
+            end_txt = True
+        # if not done responding
+        else:
+            time_left = countdown.get_time_left(time())
+            t = time()
+            if t < t + 1:
+                box.setAutoDraw(True)
+                round_counter.draw()
+                q_msg.draw()
+                countdown.draw_time_left(time_left, win)
+                win.flip()
+                t = time()
+            # if time runs out, next screen
+            if t > t0 + wait_time:
+                resp = box.getText()
+                box.clear()
+                box.setAutoDraw(False)
+                win.flip()
+                end_txt = True
+            else:
+                continue
+    del countdown
+    return resp
+
 
 
 class round_counter:
@@ -64,25 +276,10 @@ class CountdownTimer:
         ).draw()
 
 
-def fixation_cross(win):
-    """
-    Displays a fixation cross for a random amount of time between
-    200 and 400 milliseconds.
-    """
-    fixation = visual.TextStim(win, text="+", color="white", pos=(0, 0))
-    fixation.draw()
-    win.flip()
-    core.wait(np.random.uniform(0.2, 0.4))
 
 
-def present_text(win, text_block, text_col="white", display_time=1):
-    """
-    Displays a block of text on the screen.
-    """
-    msg = visual.TextStim(win, text=text_block, color=text_col, pos=(0, 0))
-    msg.draw()
-    win.flip()
-    core.wait(display_time)
+
+
 
 
 def make_round_counter(win, round_num, text_col="white", position=(0.7, 0.7)):
@@ -94,13 +291,7 @@ def make_round_counter(win, round_num, text_col="white", position=(0.7, 0.7)):
     )
 
 
-def wait_for_keypress(win, message=""):
-    """
-    Wait until subject presses spacebar.
-    """
-    if message:
-        present_text(win, message)
-    event.waitKeys(keyList=["space"])  # wait until subject responds
+
 
 
 def determine_start(condition):
@@ -693,3 +884,4 @@ def present_feedback(
     conf2_txt.draw()
     win.flip()
     core.wait(display_time)
+'''
