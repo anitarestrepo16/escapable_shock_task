@@ -1,6 +1,7 @@
 import numpy as np
 import json
 from psychopy import visual, core, event
+from psychopy.hardware import keyboard
 from time import time
 import random
 
@@ -62,6 +63,7 @@ win = visual.Window(
     pos=(0, 0),
     allowGUI=False,
 )
+# kb = keyboard.Keyboard()
 
 ########################
 # Baseline Physio
@@ -98,7 +100,7 @@ Press the spacebar to continue.
 # cycle through trials
 for round in range(1, N_TRIALS + 1, 1):
     # anticipation
-    anticipation(win, ANTICIPATION_TIME)
+    # anticipation(win, ANTICIPATION_TIME)
     # avoidance
     avoidance(win, AVOIDANCE_TIME)
     # fixation

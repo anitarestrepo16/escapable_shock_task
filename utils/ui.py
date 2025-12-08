@@ -74,24 +74,38 @@ def _get_start_position(coordinate_grid, dimensions=(5, 5)):
     """
     Randomly choose one of 12 possible ball start positions.
     """
-    possible_starts = {}
-    cell_coords = {}
+    screen_coords = {}  # actual screen coordinates
+    cell_coords = {}  # cell number in grid coordinates
     n = 0
     for row in [0, 4]:
         for col in [1, 2, 3]:
-            possible_starts[str(n)] = coordinate_grid[row, col]
+            screen_coords[str(n)] = coordinate_grid[row, col]
             cell_coords[str(n)] = (row, col)
             n += 1
     for row in [1, 2, 3]:
         for col in [0, 4]:
-            possible_starts[str(n)] = coordinate_grid[row, col]
+            screen_coords[str(n)] = coordinate_grid[row, col]
             cell_coords[str(n)] = (row, col)
             n += 1
     start_n = random.sample(range(11), 1)[0]
     print(start_n)
-    print(possible_starts[str(start_n)])
+    print(screen_coords[str(start_n)])
     print(cell_coords[str(start_n)])
-    return {"pos": possible_starts[str(start_n)], "coords": cell_coords[str(start_n)]}
+    return {"pos": screen_coords[str(start_n)], "coords": cell_coords[str(start_n)]}
+
+
+def update_position(coordinate_grid, current_position, keypress):
+    # move based on cell positions
+    row, col = current_position["coords"]
+    if keypress == "right" and row < 5:
+        row = row + 1
+    if keypress == "left" and row > 0:
+        row = row - 1
+    if keypress == "up" and col < 5:
+        col = col + 1
+    if keypress == "down" and col > 0:
+        col = col - 1
+    return {"pos": coordinate_grid[row, col], "coords": (row, col)}
 
 
 def _determine_shuttle_position(start_position):
@@ -156,7 +170,8 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     border.draw()
     # draw starting grid
     _draw_grid(win, screen_size, dimensions)
-    ball.pos = starting_position["pos"]
+    ball_position = starting_position
+    ball.pos = ball_position["pos"]
     ball.draw()
     t0 = time()
     print(t0)
@@ -166,6 +181,22 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     t = time()
     shuttle_resp = False
     print(t)
+    while t < (t0 + display_time):
+        keys = event.waitKeys(keyList=["up", "down", "right", "left", "space"])
+        for key in keys:
+            if key in ["up", "down", "right", "left"]:
+                ball_position = update_position(coordinate_grid, ball_position, key)
+                ball.pos = ball_position["pos"]
+                _draw_grid(win, screen_size, dimensions)
+                ball.draw()
+                win.flip()
+            elif key == "space":
+                core.quit()
+            else:
+                _draw_grid(win, screen_size, dimensions)
+                ball.draw()
+                win.flip()
+        t = time()
 
 
 '''
