@@ -49,7 +49,7 @@ np.random.seed(subj_num)
 WINDOW_SIZE = (500, 500)
 BASELINE_TIME = 1  # 5 minutes (300s)
 ANTICIPATION_TIME = 2  # 4s
-AVOIDANCE_TIME = 2  # 6s
+AVOIDANCE_TIME = 15  # 6s
 N_TRIALS = 2
 
 # psychopy viz
