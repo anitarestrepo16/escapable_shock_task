@@ -159,6 +159,7 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     """
     Show 5-5 grid and allow for ball motion by participant.
     """
+    # define visual objects
     grid_width = screen_size[0] - BORDER_WIDTH
     avoidance_border = visual.Rect(
         win, size=screen_size, fillColor=(128, 0, 128), units="height"
@@ -169,6 +170,8 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     ball = visual.Circle(
         win, fillColor="red", units="height", radius=(grid_width / dimensions[0]) / 2
     )
+
+    # define positions on screen
     coordinate_grid = _grid_coordinates()
     print(coordinate_grid)
     starting_position = _get_start_position(coordinate_grid)
@@ -194,45 +197,52 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     shuttle_resp = False
     # print(t)
     while t < (t0 + display_time):
-        keys = event.waitKeys(keyList=["up", "down", "right", "left", "space"])
-        for key in keys:
-            print(key)
-            if key in ["up", "down", "right", "left"]:
-                ball_position = update_position(coordinate_grid, ball_position, key)
-                ball.pos = ball_position["pos"]
-                print("current position: ")
-                print(ball_position["coords"])
-                avoidance_border.draw()
-                _draw_grid(win, screen_size, dimensions)
-                ball.draw()
-                win.flip()
-                if (shuttle_row == 99) & (ball_position["coords"][1] == shuttle_col):
-                    shuttle_border.draw()
+        if not shuttle_resp:
+            keys = event.waitKeys(keyList=["up", "down", "right", "left", "space"])
+            for key in keys:
+                print(key)
+                if key in ["up", "down", "right", "left"]:
+                    ball_position = update_position(coordinate_grid, ball_position, key)
+                    ball.pos = ball_position["pos"]
+                    print("current position: ")
+                    print(ball_position["coords"])
+                    avoidance_border.draw()
                     _draw_grid(win, screen_size, dimensions)
                     ball.draw()
                     win.flip()
-                    print("shuttle achieved")
-                    shuttle_resp = True
-                    t = time()
-                    core.wait(display_time - t)
-                    break
-                elif (shuttle_col == 99) & (ball_position["coords"][0] == shuttle_row):
-                    shuttle_border.draw()
+                    if (shuttle_row == 99) & (
+                        ball_position["coords"][1] == shuttle_col
+                    ):
+                        shuttle_border.draw()
+                        _draw_grid(win, screen_size, dimensions)
+                        ball.draw()
+                        win.flip()
+                        print("shuttle achieved")
+                        shuttle_resp = True
+                        t = time()
+                    elif (shuttle_col == 99) & (
+                        ball_position["coords"][0] == shuttle_row
+                    ):
+                        shuttle_border.draw()
+                        _draw_grid(win, screen_size, dimensions)
+                        ball.draw()
+                        win.flip()
+                        print("shuttle achieved")
+                        shuttle_resp = True
+                        t = time()
+                elif key == "space":
+                    core.quit()
+                else:
+                    avoidance_border.draw()
                     _draw_grid(win, screen_size, dimensions)
                     ball.draw()
                     win.flip()
-                    print("shuttle achieved")
-                    shuttle_resp = True
                     t = time()
-                    core.wait(display_time - t)
-                    break
-            elif key == "space":
-                core.quit()
-            else:
-                avoidance_border.draw()
-                _draw_grid(win, screen_size, dimensions)
-                ball.draw()
-                win.flip()
+        else:
+            shuttle_border.draw()
+            _draw_grid(win, screen_size, dimensions)
+            ball.draw()
+            win.flip()
         t = time()
 
 
