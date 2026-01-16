@@ -11,6 +11,7 @@ from utils.ui import (
     anticipation,
     avoidance,
     fixation_cross,
+    likert_scale,
 )
 
 from utils.write import CSVWriter_trial, CSVWriter_subj
@@ -38,18 +39,17 @@ parport.set_trigger_labels(
 # data handling
 subj_num = input("Enter subject number: ")
 subj_num = int(subj_num)
-subj_cond = input("Enter condition: ")
+condition = input("Enter condition: ")
 trial_log = CSVWriter_trial(subj_num)
 subj_log = CSVWriter_subj(subj_num)
-subj_log.write(subj_num, subj_cond)
 np.random.seed(subj_num)
 
 
 WINDOW_SIZE = (500, 500)
 BASELINE_TIME = 1  # 5 minutes (300s)
 ANTICIPATION_TIME = 2  # 4s
-AVOIDANCE_TIME = 6  # 6s
-N_TRIALS = 4
+AVOIDANCE_TIME = 3  # 6s
+N_TRIALS = 1
 
 # psychopy viz
 win = visual.Window(
@@ -141,14 +141,11 @@ t2 = time()
 print("Task Complete.")
 print("The task took %d minutes." % ((t2 - t1) / 60))
 
-# if condition in ["ES", "IS"]:
-txt = """
-How much control did you have over the task?
-  \n
-Press the spacebar to continue.
-"""
-# wait_for_keypress(win, txt)
-
+if condition in ["ES", "IS"]:
+    control_rating = likert_scale(win)
+else:
+    control_rating = 99
+subj_log.write(subj_num, condition, control_rating)
 
 ########################
 # Forecasting Survey

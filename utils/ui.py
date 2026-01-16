@@ -1,4 +1,5 @@
 from psychopy import visual, core, event
+from psychopy_legacy.visual.ratingscale import RatingScale
 
 # from psychopy.tools.filetools import fromFile, toFile
 import numpy as np
@@ -264,21 +265,21 @@ def likert_scale(win):
     Returns fatigue rating (int).
     """
     # create rating scale
-    fatigue_scale = visual.RatingScale(
+    fatigue_scale = RatingScale(
         win,
-        low=0,
-        high=100,
+        low=1,
+        high=9,
         scale=None,
-        tickMarks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+        tickMarks=[1, 2, 3, 4, 5, 6, 7, 8, 9],
         marker="slider",
-        markerStart=50,
+        markerStart=4,
         markerColor="DarkRed",
         stretch=2,
     )
     # create instruction message
     msg = visual.TextStim(
         win,
-        text="Rate your current hand fatigue from 0 (low) to 100 (high):",
+        text="How much control did you have over the task?",
         color="white",
         pos=(0, 0),
     )
