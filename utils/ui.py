@@ -14,7 +14,9 @@ def present_text(win, text_block, text_col="white", display_time=1):
     """
     Displays a block of text on the screen.
     """
-    msg = visual.TextStim(win, text=text_block, color=text_col, pos=(0, 0))
+    msg = visual.TextStim(
+        win, text=text_block, color=text_col, pos=(0, 0), units="height"
+    )
     msg.draw()
     win.flip()
     core.wait(display_time)
@@ -254,7 +256,7 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     return (shuttle_resp, time_to_shuttle, keys_pressed)
 
 
-def likert_scale(win, prompt):
+def likert_scale(win, prompt, lower_label="1", higher_label="9"):
     """
     Present a 9-point likert scale with slider and return the rating.
 
@@ -263,25 +265,23 @@ def likert_scale(win, prompt):
 
     Returns rating (int).
     """
+    start_pos = random.randint(1, 9)
     # create rating scale
     sliding_scale = RatingScale(
         win,
         low=1,
         high=9,
+        labels=[lower_label, "2", "3", "4", "5", "6", "7", "8", higher_label],
+        textColor="white",
         scale=None,
         tickMarks=[1, 2, 3, 4, 5, 6, 7, 8, 9],
         marker="slider",
-        markerStart=4,
+        markerStart=start_pos,
         markerColor="DarkRed",
         stretch=2,
     )
     # create instruction message
-    msg = visual.TextStim(
-        win,
-        text=prompt,
-        color="white",
-        pos=(0, 0),
-    )
+    msg = visual.TextStim(win, text=prompt, color="white", pos=(0, 0), units="height")
 
     # draw and collect response
     while sliding_scale.noResponse:

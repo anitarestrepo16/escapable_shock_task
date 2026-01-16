@@ -50,10 +50,10 @@ FS_outcomes_log = CSVWriter_FS(subj_num)
 np.random.seed(subj_num)
 
 
-WINDOW_SIZE = (500, 500)
+WINDOW_SIZE = (1000, 1000)
 BASELINE_TIME = 1  # 5 minutes (300s)
 ANTICIPATION_TIME = 2  # 4s
-AVOIDANCE_TIME = 3  # 6s
+AVOIDANCE_TIME = 2  # 6s
 N_TRIALS = 1
 
 # psychopy viz
@@ -147,7 +147,9 @@ print("Task Complete.")
 print("The task took %d minutes." % ((t2 - t1) / 60))
 
 if condition in ["ES", "IS"]:
-    control_rating = likert_scale(win, "How much control did you have over the task?")
+    control_rating = likert_scale(
+        win, "How much control did you have over the task?", "none at all", "very much"
+    )
 else:
     control_rating = 99
 
@@ -176,11 +178,17 @@ Note* I'm considering making the ESG a 9-by-9 instead of a 5-by-5 grid so that I
 - Press [spacebar] to continue
 """
 FS_intensity = likert_scale(
-    win, "During the stressful task, how intense will your feelings be?"
+    win,
+    "During the stressful task, how intense will your feelings be?",
+    "not intense at all",
+    "very intense",
 )
 
 FS_mood = likert_scale(
-    win, "How much of an impact will the stressful task have on your overall mood?"
+    win,
+    "How much of an impact will the stressful task have on your overall mood?",
+    "no impact at all",
+    "extremely impactful",
 )
 subj_log.write(subj_num, condition, control_rating, FS_intensity, FS_mood)
 
@@ -199,10 +207,14 @@ for outcome in outcomes:
     pos_feelings = likert_scale(
         win,
         "In the day following the session, how frequently did you have positive feelings about the stressful task?",
+        "not at all",
+        "constantly",
     )
     neg_feelings = likert_scale(
         win,
         "In the day following the session, how frequently did you have negative feelings about the stressful task?",
+        "not at all",
+        "constantly",
     )
     FS_outcomes_log.write(outcome, pos_feelings, neg_feelings)
 
