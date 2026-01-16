@@ -254,18 +254,17 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     return (shuttle_resp, time_to_shuttle, keys_pressed)
 
 
-def likert_scale(win):
+def likert_scale(win, prompt):
     """
-    Present a slider for subjects to rate fatigue from
-            0 to 100 and return the rating.
+    Present a 9-point likert scale with slider and return the rating.
 
     Arguments:
             win: psychopy window to present stimuli on
 
-    Returns fatigue rating (int).
+    Returns rating (int).
     """
     # create rating scale
-    fatigue_scale = RatingScale(
+    sliding_scale = RatingScale(
         win,
         low=1,
         high=9,
@@ -279,18 +278,18 @@ def likert_scale(win):
     # create instruction message
     msg = visual.TextStim(
         win,
-        text="How much control did you have over the task?",
+        text=prompt,
         color="white",
         pos=(0, 0),
     )
 
     # draw and collect response
-    while fatigue_scale.noResponse:
+    while sliding_scale.noResponse:
         msg.draw()
-        fatigue_scale.draw()
+        sliding_scale.draw()
         win.flip()
 
-    return fatigue_scale.getRating()
+    return sliding_scale.getRating()
 
 
 '''

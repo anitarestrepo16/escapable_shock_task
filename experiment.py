@@ -14,7 +14,7 @@ from utils.ui import (
     likert_scale,
 )
 
-from utils.write import CSVWriter_trial, CSVWriter_subj
+from utils.write import CSVWriter_trial, CSVWriter_subj, CSVWriter_FS
 
 # from utils.triggerer import Triggerer
 
@@ -40,8 +40,13 @@ parport.set_trigger_labels(
 subj_num = input("Enter subject number: ")
 subj_num = int(subj_num)
 condition = input("Enter condition: ")
+# check condition validity
+if condition not in ["IS", "ES", "NS"]:
+    print("INVALID CONDITION ENTERED - PLEASE START AGAIN.")
+    core.quit()
 trial_log = CSVWriter_trial(subj_num)
 subj_log = CSVWriter_subj(subj_num)
+FS_outcomes_log = CSVWriter_FS(subj_num)
 np.random.seed(subj_num)
 
 
@@ -95,13 +100,13 @@ Press the spacebar to continue.
 """
 # wait_for_keypress(win, txt)
 
-# if condition in ["ES", "IS"]:
-txt = """
-You will receive shocks only when the grid is on the screen.
-  \n
-Press the spacebar to continue.
-"""
-# wait_for_keypress(win, txt)
+if condition in ["ES", "IS"]:
+    txt = """
+  You will receive shocks only when the grid is on the screen.
+    \n
+  Press the spacebar to continue.
+  """
+    wait_for_keypress(win, txt)
 
 txt = """
 Use the arrow keys on the keyboard to explore different actions in the grid.
@@ -142,20 +147,70 @@ print("Task Complete.")
 print("The task took %d minutes." % ((t2 - t1) / 60))
 
 if condition in ["ES", "IS"]:
-    control_rating = likert_scale(win)
+    control_rating = likert_scale(win, "How much control did you have over the task?")
 else:
     control_rating = 99
-subj_log.write(subj_num, condition, control_rating)
 
 ########################
 # Forecasting Survey
 ########################
+txt = """
+Please schedule your next lab session with the experimenter now.
+"""
+wait_for_keypress(win, txt)
+
+txt = """
+Imagine that it is your second experimental session, 
+where you will be participating in a stressful task.
+\n
+"Press the spacebar to continue"
+"""
+wait_for_keypress(win, txt)
+
+
+txt = """During the stressful task, how will you feel?"
+- ESG with "how positive will you feel?" on the x-axis and "how negative will you feel?" on the y-axis 
+
+Note* I'm considering making the ESG a 9-by-9 instead of a 5-by-5 grid so that I could reconstruct exactly the 
+
+- Press [spacebar] to continue
+"""
+FS_intensity = likert_scale(
+    win, "During the stressful task, how intense will your feelings be?"
+)
+
+FS_mood = likert_scale(
+    win, "How much of an impact will the stressful task have on your overall mood?"
+)
+subj_log.write(subj_num, condition, control_rating, FS_intensity, FS_mood)
+
+outcomes = ["better than", "worse than", "the same as"]
+random.shuffle(outcomes)
+
+for outcome in outcomes:
+    txt = (
+        "Imagine that it is a few days after your second experimental session, \
+    during which you participated in a stressful task. \
+    The stressful task was "
+        + outcome
+        + " you had expected."
+    )
+    wait_for_keypress(win, txt)
+    pos_feelings = likert_scale(
+        win,
+        "In the day following the session, how frequently did you have positive feelings about the stressful task?",
+    )
+    neg_feelings = likert_scale(
+        win,
+        "In the day following the session, how frequently did you have negative feelings about the stressful task?",
+    )
+    FS_outcomes_log.write(outcome, pos_feelings, neg_feelings)
 
 ##########################
 # and we're done!
 ##########################
 txt = """ 
-That’s all! You can press the space bar to end the experiment. 
+Thank you for your participation! You can press the space bar to end the experiment. 
 Please let the experimenter know that you are done.
 """
 wait_for_keypress(win, txt)
