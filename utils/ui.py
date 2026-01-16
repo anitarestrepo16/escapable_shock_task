@@ -195,12 +195,15 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     # move ball
     t = time()
     shuttle_resp = False
+    time_to_shuttle = 0
     # print(t)
+    keys_pressed = []
     while t < (t0 + display_time):
         if not shuttle_resp:
             keys = event.waitKeys(keyList=["up", "down", "right", "left", "space"])
             for key in keys:
                 print(key)
+                keys_pressed.append(key)
                 if key in ["up", "down", "right", "left"]:
                     ball_position = update_position(coordinate_grid, ball_position, key)
                     ball.pos = ball_position["pos"]
@@ -220,6 +223,7 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
                         print("shuttle achieved")
                         shuttle_resp = True
                         t = time()
+                        time_to_shuttle = t - t0
                     elif (shuttle_col == 99) & (
                         ball_position["coords"][0] == shuttle_row
                     ):
@@ -230,6 +234,7 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
                         print("shuttle achieved")
                         shuttle_resp = True
                         t = time()
+                        time_to_shuttle = t - t0
                 elif key == "space":
                     core.quit()
                 else:
@@ -244,6 +249,47 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
             ball.draw()
             win.flip()
         t = time()
+    keys_pressed = "_".join(keys_pressed)
+    return (shuttle_resp, time_to_shuttle, keys_pressed)
+
+
+def likert_scale(win):
+    """
+    Present a slider for subjects to rate fatigue from
+            0 to 100 and return the rating.
+
+    Arguments:
+            win: psychopy window to present stimuli on
+
+    Returns fatigue rating (int).
+    """
+    # create rating scale
+    fatigue_scale = visual.RatingScale(
+        win,
+        low=0,
+        high=100,
+        scale=None,
+        tickMarks=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+        marker="slider",
+        markerStart=50,
+        markerColor="DarkRed",
+        stretch=2,
+    )
+    # create instruction message
+    msg = visual.TextStim(
+        win,
+        text="Rate your current hand fatigue from 0 (low) to 100 (high):",
+        color="white",
+        pos=(0, 0),
+    )
+
+    # draw and collect response
+    while fatigue_scale.noResponse:
+        msg.draw()
+        fatigue_scale.draw()
+        win.flip()
+
+    return fatigue_scale.getRating()
 
 
 '''
