@@ -1,7 +1,6 @@
 import numpy as np
 import json
 from psychopy import visual, core, event
-from psychopy.hardware import keyboard
 from time import time
 import random
 
@@ -12,6 +11,7 @@ from utils.ui import (
     avoidance,
     fixation_cross,
     likert_scale,
+    esg,
 )
 
 from utils.write import CSVWriter_trial, CSVWriter_subj, CSVWriter_FS
@@ -68,6 +68,7 @@ win = visual.Window(
     allowGUI=False,
 )
 # kb = keyboard.Keyboard()
+mickey = event.Mouse()
 
 ########################
 # Baseline Physio
@@ -83,7 +84,7 @@ Press the spacebar when you're ready to begin.
 
 # Get Baseline Physio
 # parport.send_trigger("baseline_start")
-present_text(win=win, text_block="Relax", text_col="white", display_time=BASELINE_TIME)
+# present_text(win=win, text_block="Relax", text_col="white", display_time=BASELINE_TIME)
 # parport.send_trigger("baseline_end")
 
 ########################
@@ -106,7 +107,7 @@ if condition in ["ES", "IS"]:
     \n
   Press the spacebar to continue.
   """
-    wait_for_keypress(win, txt)
+    # wait_for_keypress(win, txt)
 
 txt = """
 Use the arrow keys on the keyboard to explore different actions in the grid.
@@ -120,11 +121,11 @@ When you are ready, press the spacebar to begin the task.
 # cycle through trials
 for trial_num in range(1, N_TRIALS + 1, 1):
     # anticipation
-    anticipation(win, ANTICIPATION_TIME)
+    # anticipation(win, ANTICIPATION_TIME)
     # avoidance
     shuttle_resp_success, time_to_shuttle, keys_pressed = avoidance(win, AVOIDANCE_TIME)
     # fixation
-    fixation_cross(win)
+    # fixation_cross(win)
 
     # save data
     trial_log.write(
@@ -159,7 +160,7 @@ else:
 txt = """
 Please schedule your next lab session with the experimenter now.
 """
-wait_for_keypress(win, txt)
+# wait_for_keypress(win, txt)
 
 txt = """
 Imagine that it is your second experimental session, 
@@ -167,16 +168,12 @@ where you will be participating in a stressful task.
 \n
 "Press the spacebar to continue"
 """
-wait_for_keypress(win, txt)
+# wait_for_keypress(win, txt)
 
+FS_esg_pos, FS_esg_neg = esg(
+    win, mickey, "During the stressful task, how will you feel?"
+)
 
-txt = """During the stressful task, how will you feel?"
-- ESG with "how positive will you feel?" on the x-axis and "how negative will you feel?" on the y-axis 
-
-Note* I'm considering making the ESG a 9-by-9 instead of a 5-by-5 grid so that I could reconstruct exactly the 
-
-- Press [spacebar] to continue
-"""
 FS_intensity = likert_scale(
     win,
     "During the stressful task, how intense will your feelings be?",
@@ -190,16 +187,16 @@ FS_mood = likert_scale(
     "no impact at all",
     "extremely impactful",
 )
-subj_log.write(subj_num, condition, control_rating, FS_intensity, FS_mood)
+subj_log.write(
+    subj_num, condition, control_rating, FS_esg_pos, FS_esg_neg, FS_intensity, FS_mood
+)
 
 outcomes = ["better than", "worse than", "the same as"]
 random.shuffle(outcomes)
 
 for outcome in outcomes:
     txt = (
-        "Imagine that it is a few days after your second experimental session, \
-    during which you participated in a stressful task. \
-    The stressful task was "
+        "Imagine that it is a few days after your second experimental session, during which you participated in a stressful task. The stressful task was "
         + outcome
         + " you had expected."
     )

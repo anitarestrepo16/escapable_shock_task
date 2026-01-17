@@ -5,9 +5,9 @@ from psychopy_legacy.visual.ratingscale import RatingScale
 import numpy as np
 from time import time
 import random
-import re
 
 BORDER_WIDTH = 0.2
+TEXT_HEIGHT = 0.05
 
 
 def present_text(win, text_block, text_col="white", display_time=1):
@@ -15,7 +15,7 @@ def present_text(win, text_block, text_col="white", display_time=1):
     Displays a block of text on the screen.
     """
     msg = visual.TextStim(
-        win, text=text_block, color=text_col, pos=(0, 0), units="height"
+        win, text=text_block, color=text_col, pos=(0, 0), height=TEXT_HEIGHT
     )
     msg.draw()
     win.flip()
@@ -198,54 +198,59 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     # move ball
     t = time()
     shuttle_resp = False
-    time_to_shuttle = 0
+    time_to_shuttle = 99
     # print(t)
     keys_pressed = []
     while t < (t0 + display_time):
         if not shuttle_resp:
-            keys = event.waitKeys(keyList=["up", "down", "right", "left", "space"])
-            for key in keys:
-                print(key)
-                keys_pressed.append(key)
-                if key in ["up", "down", "right", "left"]:
-                    ball_position = update_position(coordinate_grid, ball_position, key)
-                    ball.pos = ball_position["pos"]
-                    print("current position: ")
-                    print(ball_position["coords"])
-                    avoidance_border.draw()
-                    _draw_grid(win, screen_size, dimensions)
-                    ball.draw()
-                    win.flip()
-                    if (shuttle_row == 99) & (
-                        ball_position["coords"][1] == shuttle_col
-                    ):
-                        shuttle_border.draw()
+            keys = event.waitKeys(
+                keyList=["up", "down", "right", "left", "space"], maxWait=display_time
+            )
+            if keys is not None:
+                for key in keys:
+                    print(key)
+                    keys_pressed.append(key)
+                    if key in ["up", "down", "right", "left"]:
+                        ball_position = update_position(
+                            coordinate_grid, ball_position, key
+                        )
+                        ball.pos = ball_position["pos"]
+                        print("current position: ")
+                        print(ball_position["coords"])
+                        avoidance_border.draw()
                         _draw_grid(win, screen_size, dimensions)
                         ball.draw()
                         win.flip()
-                        print("shuttle achieved")
-                        shuttle_resp = True
-                        t = time()
-                        time_to_shuttle = t - t0
-                    elif (shuttle_col == 99) & (
-                        ball_position["coords"][0] == shuttle_row
-                    ):
-                        shuttle_border.draw()
+                        if (shuttle_row == 99) & (
+                            ball_position["coords"][1] == shuttle_col
+                        ):
+                            shuttle_border.draw()
+                            _draw_grid(win, screen_size, dimensions)
+                            ball.draw()
+                            win.flip()
+                            print("shuttle achieved")
+                            shuttle_resp = True
+                            t = time()
+                            time_to_shuttle = t - t0
+                        elif (shuttle_col == 99) & (
+                            ball_position["coords"][0] == shuttle_row
+                        ):
+                            shuttle_border.draw()
+                            _draw_grid(win, screen_size, dimensions)
+                            ball.draw()
+                            win.flip()
+                            print("shuttle achieved")
+                            shuttle_resp = True
+                            t = time()
+                            time_to_shuttle = t - t0
+                    elif key == "space":
+                        core.quit()
+                    else:
+                        avoidance_border.draw()
                         _draw_grid(win, screen_size, dimensions)
                         ball.draw()
                         win.flip()
-                        print("shuttle achieved")
-                        shuttle_resp = True
                         t = time()
-                        time_to_shuttle = t - t0
-                elif key == "space":
-                    core.quit()
-                else:
-                    avoidance_border.draw()
-                    _draw_grid(win, screen_size, dimensions)
-                    ball.draw()
-                    win.flip()
-                    t = time()
         else:
             shuttle_border.draw()
             _draw_grid(win, screen_size, dimensions)
@@ -281,7 +286,9 @@ def likert_scale(win, prompt, lower_label="1", higher_label="9"):
         stretch=2,
     )
     # create instruction message
-    msg = visual.TextStim(win, text=prompt, color="white", pos=(0, 0), units="height")
+    msg = visual.TextStim(
+        win, text=prompt, color="white", pos=(0, 0), height=TEXT_HEIGHT
+    )
 
     # draw and collect response
     while sliding_scale.noResponse:
@@ -290,6 +297,94 @@ def likert_scale(win, prompt, lower_label="1", higher_label="9"):
         win.flip()
 
     return sliding_scale.getRating()
+
+
+def _get_esg_locs(i, j, grid_dims=9, grid_size=2 / 4.0):
+    square_width = grid_size / grid_dims
+    x_start = -grid_size / 2  # from center
+    y_start = -grid_size / 2  # from lower half of screen
+    x = x_start + i * square_width + square_width / 2
+    y = y_start + j * square_width + square_width / 2
+    return x, y
+
+
+def esg(win, mouse, prompt="", grid_dims=9, grid_size=2 / 4.0):
+    """
+    Draws an evaluative space grid and collects a mouse response.
+    Keeps redrawing until response collected, such that square
+    mouse is hovering over is highlighted in red.
+
+    Parameters
+    ----------
+    win : psychopy.visual.Window object
+    mouse : psychopy.event.Mouse
+
+    Returns
+    ----------
+    positive : int
+        Likert score on positive dimension
+    negative : int
+        Likert score on negative dimension
+    """
+    # question text
+    qtext = visual.TextStim(win, prompt, pos=(0, 0.4), height=TEXT_HEIGHT)
+    qtext.autoDraw = True
+
+    # make grid of squares
+    grid = np.empty((grid_dims, grid_dims), dtype=object)
+    for i in range(grid_dims):
+        for j in range(grid_dims):
+            grid[i, j] = visual.Rect(
+                win,
+                size=grid_size / grid_dims,
+                pos=_get_esg_locs(i, j),
+                fillColor="white",
+                lineColor="black",
+                units="height",
+                autoDraw=True,  # draw on every screen flip until turned off
+            )
+    xlab = visual.TextStim(
+        win,
+        "More positive -->",
+        pos=(0, -0.4),
+        height=TEXT_HEIGHT,
+    )
+    xlab.autoDraw = True
+    ylab = visual.TextStim(
+        win,
+        "More negative -->",
+        pos=(-0.4, 0),
+        height=TEXT_HEIGHT,
+        ori=270,
+    )
+    ylab.autoDraw = True
+    win.flip()
+
+    # now wait until mouse is pressed
+    pressed = False
+    while not pressed:
+        for i in range(grid_dims):
+            for j in range(grid_dims):
+                # let's give participant a little visual pizzaz
+                if grid[i, j].contains(mouse):
+                    grid[i, j].fillColor = "red"
+                else:
+                    grid[i, j].fillColor = "white"
+                if mouse.isPressedIn(grid[i, j]):
+                    pos, neg = i, j  # save to return later
+                    pressed = True  # terminates `while` loop
+        win.flip()
+
+    # clean up
+    for i in range(grid_dims):
+        for j in range(grid_dims):
+            grid[i, j].autoDraw = False  # turn off autodraw
+    xlab.autoDraw = False
+    ylab.autoDraw = False
+    win.flip()  # then flip again to clear screen
+    print("positive rating: " + str(pos + 1))
+    print("negative rating: " + str(neg + 1))
+    return pos + 1, neg + 1  # return to 1-indexing for Likertness
 
 
 '''
