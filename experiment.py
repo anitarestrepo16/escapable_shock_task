@@ -16,13 +16,16 @@ from utils.ui import (
 )
 
 from utils.write import CSVWriter_trial, CSVWriter_subj, CSVWriter_FS
-from utils.triggerer import Triggerer
+# for ECG triggers...
+from utils.triggerer_ecg import Triggerer
+# for fNIRS triggers...
+from utils.triggerer_nirs import NIRS_Triggerer
+# for initiating shocks...
 from utils.controller import PulseGenerator
 
-# parport triggers
+# define ECG triggers (to be sent via parallel port)
 parport = Triggerer(1)
-parport.set_trigger_labels(
-    [
+parport.set_trigger_labels([
         "shock",
         "anticipation_start",
         "anticipation_end",
@@ -33,10 +36,28 @@ parport.set_trigger_labels(
         "fs_start_mood",
         "fs_start_pos_freq",
         "fs_start_neg_freq",
-        "forecasting_end"
-    ]
-)
+        "forecasting_end",
+])
 ui.set_parport(parport)
+
+# define fNIRS triggers (to be sent via Lab Streaming Layer)
+nirs_triggerer = NIRS_Triggerer()
+nirs_triggerer.set_trigger_codes({
+        "shock":1,
+        "anticipation_start":2,
+        "anticipation_end":3,
+        "shock_task_end":4,
+        "forecasting_start":5,
+        "fs_start_general":6,
+        "fs_start_intensity":7,
+        "fs_start_mood":8,
+        "fs_start_pos_freq":9,
+        "fs_start_neg_freq":10,
+        "forecasting_end":11,
+})
+
+
+
 
 # data handling
 subj_num = input("Enter subject number: ")
@@ -53,7 +74,6 @@ np.random.seed(subj_num)
 
 
 WINDOW_SIZE = (1920, 1080)
-BASELINE_TIME = 30  # 5 minutes (300s)
 ANTICIPATION_TIME = 10  # 4s
 AVOIDANCE_TIME = 6  # 6s
 N_TRIALS = 20
@@ -127,6 +147,7 @@ for trial_num in range(1, N_TRIALS + 1, 1):
 
 # end state
 parport.send_trigger("shock_task_end")
+nirs_triggerer.send_named("shock_task_end")
 
 t2 = time()
 print("Task Complete.")
@@ -161,10 +182,15 @@ Now, please confirm your next lab session with the experimenter.
 """
 
 wait_for_keypress(win, txt)
+
+# mark forecasting survey onset
 parport.send_trigger("forecasting_start")
+nirs_triggerer.send_named("forecasting_start")
 
 txt = """
 Imagine that it is your second experimental session, during which you will participate in a stressful task.
+\n
+We wil be measuring your performance on the stressful task.
 \n
 Press SPACEBAR to continue
 """
@@ -223,7 +249,9 @@ for outcome in outcomes:
         trigger_name = "fs_start_neg_freq",
     )
     FS_outcomes_log.write(outcome, pos_feelings, neg_feelings)
+    # mark forecasting survey end
     parport.send_trigger("forecasting_end")
+    nirs_triggerer.send_named("forecasting_end")
 
 ##########################
 # and we're done!
