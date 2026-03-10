@@ -1,5 +1,4 @@
 from psychopy import visual, core, event
-from psychopy_legacy.visual.ratingscale import RatingScale
 
 # from psychopy.tools.filetools import fromFile, toFile
 import numpy as np
@@ -7,8 +6,13 @@ from time import time
 import random
 
 BORDER_WIDTH = 0.2
-TEXT_HEIGHT = 0.05
+TEXT_HEIGHT = 0.065
 
+parport = None
+
+def set_parport(p):
+    global parport
+    parport = p
 
 def present_text(win, text_block, text_col="white", display_time=1):
     """
@@ -52,7 +56,12 @@ def anticipation(win, display_time, screen_size=(1, 1)):
 
     border.draw()
     box.draw()
+
+    # mark anticipation phase onset in ECG data
+    if parport is not None:
+        parport.send_trigger("anticipation_start")
     win.flip()
+
     core.wait(display_time)
 
 
@@ -191,6 +200,8 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     ball_position = starting_position
     ball.pos = ball_position["pos"]
     ball.draw()
+    # mark anticipation phase offset in ECG data (right before grid appears)
+    parport.send_trigger("anticipation_end")
     win.flip()
     t0 = time()
     print(t0)
@@ -204,7 +215,7 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     while t < (t0 + display_time):
         if not shuttle_resp:
             keys = event.waitKeys(
-                keyList=["up", "down", "right", "left", "space"], maxWait=display_time
+                keyList=["up", "down", "right", "left", "escape"], maxWait=display_time
             )
             if keys is not None:
                 for key in keys:
@@ -243,7 +254,7 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
                             shuttle_resp = True
                             t = time()
                             time_to_shuttle = t - t0
-                    elif key == "space":
+                    elif key == "escape":
                         core.quit()
                     else:
                         avoidance_border.draw()
@@ -260,46 +271,64 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     keys_pressed = "_".join(keys_pressed)
     return (shuttle_resp, time_to_shuttle, keys_pressed)
 
-
-def likert_scale(win, prompt, lower_label="1", higher_label="9"):
-    """
-    Present a 9-point likert scale with slider and return the rating.
-
-    Arguments:
-            win: psychopy window to present stimuli on
-
-    Returns rating (int).
-    """
-    start_pos = random.randint(1, 9)
-    # create rating scale
-    sliding_scale = RatingScale(
+def likert_scale (win, qtext, lower_label = "1", upper_label = "9", trigger_name = None):
+    # write question text
+    question = visual.TextStim(
         win,
-        low=1,
-        high=9,
-        labels=[lower_label, "2", "3", "4", "5", "6", "7", "8", higher_label],
-        textColor="white",
-        scale=None,
-        tickMarks=[1, 2, 3, 4, 5, 6, 7, 8, 9],
-        marker="slider",
-        markerStart=start_pos,
-        markerColor="DarkRed",
-        stretch=2,
-    )
-    # create instruction message
-    msg = visual.TextStim(
-        win, text=prompt, color="white", pos=(0, 0), height=TEXT_HEIGHT
+        text=qtext,
+        pos=(0, 0.35),
+        color="White",
+        height=TEXT_HEIGHT,
+        wrapWidth=1.6
+        )
+
+    # draw slider
+    slider = visual.Slider(
+        win,
+        ticks=(1, 2, 3, 4, 5, 6, 7, 8, 9),
+        labels=(lower_label,"2","3","4","5","6","7","8",upper_label),
+        pos=(0, 0),
+        size=(1.4,0.1),
+        granularity=1,
+        style=["rating"],
+        color="White",
+        borderColor="White",
+        )
+    # add instructions
+    instruction = visual.TextStim(
+        win,
+        text="Click with the mouse to respond. Press SPACEBAR to confirm your rating.",
+        pos=(0, -0.4),
+        color="lightgrey",
+        height=0.04,
     )
 
-    # draw and collect response
-    while sliding_scale.noResponse:
-        msg.draw()
-        sliding_scale.draw()
+    slider.reset()
+
+    sent_trigger = False
+    while True:
+        question.draw()
+        slider.draw()
+        instruction.draw()
+        # add correct trigger for ECG
+        if (not sent_trigger) and (trigger_name is not None):
+            parport.send_trigger(trigger_name)
+            sent_trigger = True
+
         win.flip()
 
-    return sliding_scale.getRating()
+        keys = event.getKeys(["space", "escape"])
+        if "escape" in keys:
+            core.quit()
+        if "space" in keys and slider.getRating() is not None:
+            break
+
+    return slider.getRating()
+    print(f"rating: {slider.getRating}")
 
 
-def _get_esg_locs(i, j, grid_dims=9, grid_size=2 / 4.0):
+
+def _get_esg_locs(i, j, grid_dims=9, grid_size=0.7):
     square_width = grid_size / grid_dims
     x_start = -grid_size / 2  # from center
     y_start = -grid_size / 2  # from lower half of screen
@@ -308,7 +337,7 @@ def _get_esg_locs(i, j, grid_dims=9, grid_size=2 / 4.0):
     return x, y
 
 
-def esg(win, mouse, prompt="", grid_dims=9, grid_size=2 / 4.0):
+def esg(win, mouse, qtext, grid_dims=9, grid_size=0.7):
     """
     Draws an evaluative space grid and collects a mouse response.
     Keeps redrawing until response collected, such that square
@@ -326,10 +355,17 @@ def esg(win, mouse, prompt="", grid_dims=9, grid_size=2 / 4.0):
     negative : int
         Likert score on negative dimension
     """
-    # question text
-    qtext = visual.TextStim(win, prompt, pos=(0, 0.4), height=TEXT_HEIGHT)
-    qtext.autoDraw = True
-
+    # write question text
+    question = visual.TextStim(
+        win,
+        text=qtext,
+        pos=(0, 0.4),
+        color="White",
+        height=TEXT_HEIGHT,
+        wrapWidth=1.9,
+        )
+    question.autoDraw = True
+    win.flip()
     # make grid of squares
     grid = np.empty((grid_dims, grid_dims), dtype=object)
     for i in range(grid_dims):
@@ -345,19 +381,20 @@ def esg(win, mouse, prompt="", grid_dims=9, grid_size=2 / 4.0):
             )
     xlab = visual.TextStim(
         win,
-        "More positive -->",
-        pos=(0, -0.4),
-        height=TEXT_HEIGHT,
+        "How POSITIVE will you feel?",
+        pos=(0, -0.40),
+        height=0.05,
     )
     xlab.autoDraw = True
     ylab = visual.TextStim(
         win,
-        "More negative -->",
-        pos=(-0.4, 0),
-        height=TEXT_HEIGHT,
-        ori=270,
+        "How NEGATIVE\nwill you feel?",
+        pos=(-0.55, 0),
+        height=0.05,
     )
     ylab.autoDraw = True
+    if parport is not None:
+        parport.send_trigger("fs_start_general")
     win.flip()
 
     # now wait until mouse is pressed
@@ -376,6 +413,7 @@ def esg(win, mouse, prompt="", grid_dims=9, grid_size=2 / 4.0):
         win.flip()
 
     # clean up
+    question.autoDraw = False
     for i in range(grid_dims):
         for j in range(grid_dims):
             grid[i, j].autoDraw = False  # turn off autodraw
