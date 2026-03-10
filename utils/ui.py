@@ -60,6 +60,7 @@ def anticipation(win, display_time, screen_size=(1, 1)):
     # mark anticipation phase onset in ECG data
     if parport is not None:
         parport.send_trigger("anticipation_start")
+        nirs_triggerer.send_named("anticipation_start")
     win.flip()
 
     core.wait(display_time)
@@ -202,6 +203,8 @@ def avoidance(win, display_time, screen_size=(1, 1), dimensions=(5, 5)):
     ball.draw()
     # mark anticipation phase offset in ECG data (right before grid appears)
     parport.send_trigger("anticipation_end")
+    nirs_triggerer.send_named("anticipation_end")
+
     win.flip()
     t0 = time()
     print(t0)
@@ -310,9 +313,10 @@ def likert_scale (win, qtext, lower_label = "1", upper_label = "9", trigger_name
         question.draw()
         slider.draw()
         instruction.draw()
-        # add correct trigger for ECG
+        # add correct trigger for ECG and fNIRS
         if (not sent_trigger) and (trigger_name is not None):
             parport.send_trigger(trigger_name)
+            nirs_triggerer.send_named(trigger_name)
             sent_trigger = True
 
         win.flip()
@@ -395,6 +399,7 @@ def esg(win, mouse, qtext, grid_dims=9, grid_size=0.7):
     ylab.autoDraw = True
     if parport is not None:
         parport.send_trigger("fs_start_general")
+        nirs_triggerer.send_named("fs_start_general")
     win.flip()
 
     # now wait until mouse is pressed
